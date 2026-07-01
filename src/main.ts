@@ -15,6 +15,7 @@ async function bootstrap() {
         'http://localhost:8082',
         'http://localhost:8083',
         'exp://localhost:8081',
+        'https://e-duuka-fe.vercel.app',
       ];
 
   app.enableCors({
