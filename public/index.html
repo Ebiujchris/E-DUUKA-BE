@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Duuka - Shop Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            text-align: center;
+            position: relative;
+        }
+        
+        /* Top Navigation */
+        .top-nav {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+        
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: left 0.3s ease;
+        }
+        
+        .nav-link:hover::before {
+            left: 0;
+        }
+        
+        .nav-link:hover {
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .nav-link.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+        
+        /* Logo Section */
+        .logo-section {
+            margin-bottom: 4rem;
+        }
+        
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .app-name {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .tagline {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+        
+        /* Features List */
+        .features-list {
+            list-style: none;
+            margin-bottom: 3rem;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 0;
+            margin-bottom: 0.5rem;
+            position: relative;
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+        
+        .feature-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 0;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            transition: width 0.4s ease;
+            z-index: 1;
+        }
+        
+        .feature-item:hover::before {
+            width: 100%;
+        }
+        
+        .feature-item:hover {
+            transform: translateX(10px);
+            padding-left: 1rem;
+        }
+        
+        .feature-icon {
+            font-size: 1.8rem;
+            margin-right: 1rem;
+            position: relative;
+            z-index: 2;
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-item:hover .feature-icon {
+            transform: scale(1.2) rotate(5deg);
+        }
+        
+        .feature-text {
+            position: relative;
+            z-index: 2;
+            text-align: left;
+        }
+        
+        .feature-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.2rem;
+        }
+        
+        .feature-desc {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            font-weight: 400;
+        }
+        
+        /* Demo Button */
+        .demo-section {
+            margin-top: 3rem;
+        }
+        
+        .demo-btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .demo-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.6s ease;
+        }
+        
+        .demo-btn:hover::before {
+            left: 100%;
+        }
+        
+        .demo-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Auth Modal */
+        .auth-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .auth-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 400px;
+            color: #333;
+            position: relative;
+            animation: slideUp 0.3s ease;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            transition: color 0.3s ease;
+        }
+        
+        .close-btn:hover {
+            color: #333;
+        }
+        
+        .auth-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .success-message, .error-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+            font-weight: 500;
+        }
+        
+        .success-message {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        
+        /* Floating particles */
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        .particle:nth-child(1) {
+            width: 20px;
+            height: 20px;
+            top: 20%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+        
+        .particle:nth-child(2) {
+            width: 15px;
+            height: 15px;
+            top: 60%;
+            right: 15%;
+            animation-delay: 2s;
+        }
+        
+        .particle:nth-child(3) {
+            width: 25px;
+            height: 25px;
+            bottom: 30%;
+            left: 20%;
+            animation-delay: 4s;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 1rem 0.5rem;
+            }
+            
+            .app-name {
+                font-size: 2.5rem;
+            }
+            
+            .logo {
+                font-size: 3rem;
+            }
+            
+            .top-nav {
+                gap: 1rem;
+            }
+            
+            .feature-item {
+                padding: 0.8rem 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating particles -->
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    
+    <div class="container">
+        <!-- Top Navigation -->
+        <nav class="top-nav">
+            <a href="#" class="nav-link" onclick="openAuth('login')">Login</a>
+            <a href="#" class="nav-link" onclick="openAuth('register')">Register</a>
+        </nav>
+        
+        <!-- Logo Section -->
+        <div class="logo-section">
+            <div class="logo">🏪</div>
+            <h1 class="app-name">E-Duuka</h1>
+            <p class="tagline">Smart shop management</p>
+        </div>
+        
+        <!-- Features List -->
+        <ul class="features-list">
+            <li class="feature-item">
+                <div class="feature-icon">📊</div>
+                <div class="feature-text">
+                    <div class="feature-title">Track Daily Sales</div>
+                    <div class="feature-desc">Monitor your revenue in real-time</div>
+                </div>
+            </li>
+            
+            <li class="feature-item">
+                <div class="feature-icon">📦</div>
+                <div class="feature-text">
+                    <div class="feature-title">Manage Inventory</div>
+                    <div class="feature-desc">Keep track of stock levels</div>
+                </div>
+            </li>
+            
+            <li class="feature-item">
+                <div class="feature-icon">💰</div>
+                <div class="feature-text">
+                    <div class="feature-title">View Profits</div>
+                    <div class="feature-desc">See your daily earnings</div>
+                </div>
+            </li>
+            
+            <li class="feature-item">
+                <div class="feature-icon">📱</div>
+                <div class="feature-text">
+                    <div class="feature-title">Mobile Friendly</div>
+                    <div class="feature-desc">Works on any smartphone</div>
+                </div>
+            </li>
+            
+            <li class="feature-item">
+                <div class="feature-icon">🔄</div>
+                <div class="feature-text">
+                    <div class="feature-title">Credit Management</div>
+                    <div class="feature-desc">Track customer debts</div>
+                </div>
+            </li>
+        </ul>
+        
+        <!-- Demo Section -->
+        <div class="demo-section">
+            <a href="http://localhost:8081" class="demo-btn">📱 Try Demo</a>
+        </div>
+    </div>
+    
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="auth-modal">
+        <div class="auth-content">
+            <button class="close-btn" onclick="closeAuth()">&times;</button>
+            <h2 id="auth-title" class="auth-title">Login</h2>
+            
+            <div id="success-message" class="success-message"></div>
+            <div id="error-message" class="error-message"></div>
+            
+            <!-- Login Form -->
+            <form id="login-form" style="display: none;">
+                <div class="form-group">
+                    <label for="login-phone">Phone Number</label>
+                    <input type="tel" id="login-phone" placeholder="+256 700 000 000" required>
+                </div>
+                <button type="submit" class="submit-btn">Login to Your Shop</button>
+            </form>
+            
+            <!-- Register Form -->
+            <form id="register-form" style="display: none;">
+                <div class="form-group">
+                    <label for="register-name">Your Name</label>
+                    <input type="text" id="register-name" placeholder="John Mukasa" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-phone">Phone Number</label>
+                    <input type="tel" id="register-phone" placeholder="+256 700 000 000" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-shop">Shop Name</label>
+                    <input type="text" id="register-shop" placeholder="Mukasa General Store" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-location">Location (Optional)</label>
+                    <input type="text" id="register-location" placeholder="Kampala, Uganda">
+                </div>
+                <button type="submit" class="submit-btn">Start Managing Your Shop</button>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        let currentAuthType = 'login';
+        
+        function openAuth(type) {
+            currentAuthType = type;
+            const modal = document.getElementById('auth-modal');
+            const title = document.getElementById('auth-title');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            
+            // Update title and show appropriate form
+            if (type === 'login') {
+                title.textContent = 'Login';
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+            } else {
+                title.textContent = 'Register';
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+            }
+            
+            modal.style.display = 'flex';
+            hideMessages();
+        }
+        
+        function closeAuth() {
+            document.getElementById('auth-modal').style.display = 'none';
+            hideMessages();
+        }
+        
+        function showMessage(message, type) {
+            hideMessages();
+            const messageEl = document.getElementById(type + '-message');
+            messageEl.textContent = message;
+            messageEl.style.display = 'block';
+            
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 5000);
+        }
+        
+        function hideMessages() {
+            document.getElementById('success-message').style.display = 'none';
+            document.getElementById('error-message').style.display = 'none';
+        }
+        
+        function formatPhone(phone) {
+            return phone.replace(/\s/g, '');
+        }
+        
+        // Handle login form
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const phone = formatPhone(document.getElementById('login-phone').value);
+            
+            if (!phone) {
+                showMessage('Please enter your phone number', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ phone: phone })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.user) {
+                    showMessage('Login successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = `http://localhost:8081?userId=${data.user.id}`;
+                    }, 1500);
+                } else {
+                    showMessage('Phone number not found. Please register first.', 'error');
+                }
+            } catch (error) {
+                showMessage('Connection error. Please try again.', 'error');
+            }
+        });
+        
+        // Handle register form
+        document.getElementById('register-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('register-name').value.trim();
+            const phone = formatPhone(document.getElementById('register-phone').value);
+            const shopName = document.getElementById('register-shop').value.trim();
+            const location = document.getElementById('register-location').value.trim();
+            
+            if (!name || !phone || !shopName) {
+                showMessage('Please fill in all required fields', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        phone: phone,
+                        shopName: shopName,
+                        location: location || undefined
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('Registration successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = `http://localhost:8081?userId=${data.user.id}`;
+                    }, 1500);
+                } else {
+                    showMessage('Registration failed. Please try again.', 'error');
+                }
+            } catch (error) {
+                showMessage('Connection error. Please try again.', 'error');
+            }
+        });
+        
+        // Phone number formatting
+        document.querySelectorAll('input[type="tel"]').forEach(input => {
+            input.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.startsWith('256')) {
+                    value = '+' + value;
+                } else if (value.startsWith('0')) {
+                    value = '+256' + value.substring(1);
+                } else if (!value.startsWith('+256') && value.length > 0) {
+                    value = '+256' + value;
+                }
+                
+                if (value.length > 4) {
+                    value = value.substring(0, 4) + ' ' + value.substring(4);
+                }
+                if (value.length > 8) {
+                    value = value.substring(0, 8) + ' ' + value.substring(8);
+                }
+                if (value.length > 12) {
+                    value = value.substring(0, 12) + ' ' + value.substring(12);
+                }
+                
+                e.target.value = value;
+            });
+        });
+        
+        // Close modal when clicking outside
+        document.getElementById('auth-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAuth();
+            }
+        });
+        
+        // Add staggered animation to feature items
+        document.addEventListener('DOMContentLoaded', function() {
+            const featureItems = document.querySelectorAll('.feature-item');
+            featureItems.forEach((item, index) => {
+                item.style.opacity = '0';
+                item.style.transform = 'translateX(-30px)';
+                setTimeout(() => {
+                    item.style.transition = 'all 0.6s ease';
+                    item.style.opacity = '1';
+                    item.style.transform = 'translateX(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>
