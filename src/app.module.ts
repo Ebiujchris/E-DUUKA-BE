@@ -13,6 +13,8 @@ import { Sale } from './entities/sale.entity';
 import { Credit } from './entities/credit.entity';
 import { Staff } from './entities/staff.entity';
 import { Expense } from './entities/expense.entity';
+import { Supplier } from './entities/supplier.entity';
+import { PurchaseOrder } from './entities/purchase-order.entity';
 import { UsersModule } from './modules/users/users.module';
 import { ProductsModule } from './modules/products/products.module';
 import { SalesModule } from './modules/sales/sales.module';
@@ -21,6 +23,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { StaffModule } from './modules/staff/staff.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
+import { SuppliersModule } from './modules/suppliers/suppliers.module';
+import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
 
 @Module({
   imports: [
@@ -35,7 +39,7 @@ import { ExpensesModule } from './modules/expenses/expenses.module';
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      entities: [Shop, User, Product, Sale, Credit, Staff, Expense],
+      entities: [Shop, User, Product, Sale, Credit, Staff, Expense, Supplier, PurchaseOrder],
       synchronize: true,
       logging: false,
       ssl: true,
@@ -53,6 +57,8 @@ import { ExpensesModule } from './modules/expenses/expenses.module';
     DashboardModule,
     StaffModule,
     ExpensesModule,
+    SuppliersModule,
+    PurchaseOrdersModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
