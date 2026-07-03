@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { SalesService } from '../sales/sales.service';
 import { ProductsService } from '../products/products.service';
 import { CreditsService } from '../credits/credits.service';
+import { SuppliersService } from '../suppliers/suppliers.service';
+import { ExpensesService } from '../expenses/expenses.service';
 
 @Injectable()
 export class DashboardService {
@@ -9,6 +11,8 @@ export class DashboardService {
     private salesService: SalesService,
     private productsService: ProductsService,
     private creditsService: CreditsService,
+    private suppliersService: SuppliersService,
+    private expensesService: ExpensesService,
   ) {}
 
   async getDashboardData(shopId: string) {
@@ -132,6 +136,83 @@ export class DashboardService {
       dailySales,
       topProducts,
       period,
+    };
+  }
+
+  async getBalanceSheet(shopId: string) {
+    const now = new Date();
+    const yearStart = new Date(now.getFullYear(), 0, 1);
+
+    const [products, creditStats, suppliers, allSales, allExpenses] = await Promise.all([
+      this.productsService.findAll(shopId),
+      this.creditsService.getCreditStats(shopId),
+      this.suppliersService.findAll(shopId),
+      this.salesService.findByDateRange(shopId, yearStart, now),
+      this.expensesService.findAll(shopId),
+    ]);
+
+    // ── ASSETS ────────────────────────────────────────────────────────────────
+    // 1. Stock on hand (units × buying price)
+    const stockValue = products.reduce(
+      (sum, p) => sum + Number(p.stockQuantity) * Number(p.buyingPrice), 0,
+    );
+    const stockItems = products.map(p => ({
+      name: p.name,
+      qty: Number(p.stockQuantity),
+      buyingPrice: Number(p.buyingPrice),
+      value: Number(p.stockQuantity) * Number(p.buyingPrice),
+    }));
+
+    // 2. Receivables — money owed to the shop by customers (outstanding credits)
+    const receivables = Number(creditStats.totalOutstanding);
+
+    // 3. Revenue this year (proxy for cash earned — bank + till combined)
+    const activeSales = allSales.filter(s => s.status !== 'voided');
+    const cashRevenue = activeSales
+      .filter(s => s.paymentType !== 'credit')
+      .reduce((sum, s) => sum + Number(s.totalAmount), 0);
+
+    // ── LIABILITIES ───────────────────────────────────────────────────────────
+    // What the shop owes suppliers
+    const supplierDebt = suppliers.reduce((sum, s) => sum + Number(s.totalOwed), 0);
+    const supplierBreakdown = suppliers
+      .filter(s => Number(s.totalOwed) > 0)
+      .map(s => ({ name: s.name, owed: Number(s.totalOwed) }));
+
+    // ── INCOME STATEMENT (YTD) ─────────────────────────────────────────────────
+    const totalRevenue = activeSales.reduce((sum, s) => sum + Number(s.totalAmount), 0);
+    const grossProfit  = activeSales.reduce((sum, s) =>
+      sum + (Number(s.unitPrice) - Number(s.product?.buyingPrice ?? 0)) * Number(s.quantity), 0);
+    const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+    const netProfit = grossProfit - totalExpenses;
+
+    // ── EQUITY ────────────────────────────────────────────────────────────────
+    const totalAssets = stockValue + receivables + cashRevenue;
+    const totalLiabilities = supplierDebt;
+    const equity = totalAssets - totalLiabilities;
+
+    return {
+      asOf: now.toISOString(),
+      assets: {
+        stockValue,
+        stockItems,
+        receivables,
+        cashRevenue,
+        total: totalAssets,
+      },
+      liabilities: {
+        supplierDebt,
+        supplierBreakdown,
+        total: totalLiabilities,
+      },
+      equity,
+      incomeStatement: {
+        totalRevenue,
+        grossProfit,
+        totalExpenses,
+        netProfit,
+        period: `${now.getFullYear()} YTD`,
+      },
     };
   }
 }

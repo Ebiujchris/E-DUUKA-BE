@@ -19,4 +19,9 @@ export class DashboardController {
   ) {
     return this.dashboardService.getAnalytics(req.user.shopId, period);
   }
+
+  @Get('balance-sheet')
+  getBalanceSheet(@Req() req: any) {
+    return this.dashboardService.getBalanceSheet(req.user.shopId);
+  }
 }

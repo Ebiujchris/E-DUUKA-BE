@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsNumber, Min } from 'class-validator';
 
 export class CreateSupplierDto {
   @IsString()
@@ -37,6 +37,21 @@ export class UpdateSupplierDto {
   @IsString()
   @IsOptional()
   address?: string;
+
+  @IsString()
+  @IsOptional()
+  notes?: string;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  totalOwed?: number;
+}
+
+export class SupplierPaymentDto {
+  @IsNumber()
+  @Min(0.01)
+  amount: number;
 
   @IsString()
   @IsOptional()

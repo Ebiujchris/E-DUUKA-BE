@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { SuppliersService } from './suppliers.service';
-import { CreateSupplierDto, UpdateSupplierDto } from './dto/supplier.dto';
+import { CreateSupplierDto, UpdateSupplierDto, SupplierPaymentDto } from './dto/supplier.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('suppliers')
@@ -21,6 +21,11 @@ export class SuppliersController {
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: any) {
     return this.suppliersService.findOne(id, req.user.shopId);
+  }
+
+  @Post(':id/pay')
+  recordPayment(@Param('id') id: string, @Body() dto: SupplierPaymentDto, @Req() req: any) {
+    return this.suppliersService.recordPayment(id, req.user.shopId, dto);
   }
 
   @Patch(':id')
