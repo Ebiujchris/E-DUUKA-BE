@@ -21,6 +21,7 @@ export class CreateExpenseDto {
   receiptNumber?: string;
 
   @IsDateString()
+  @IsOptional()
   expenseDate: string;
 
   @IsString()

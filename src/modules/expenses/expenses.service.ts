@@ -12,7 +12,10 @@ export class ExpensesService {
   ) {}
 
   async create(createExpenseDto: CreateExpenseDto): Promise<Expense> {
-    const expense = this.expenseRepository.create(createExpenseDto);
+    const expense = this.expenseRepository.create({
+      ...createExpenseDto,
+      expenseDate: createExpenseDto.expenseDate ?? new Date().toISOString().split('T')[0],
+    });
     return this.expenseRepository.save(expense);
   }
 

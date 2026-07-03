@@ -30,8 +30,8 @@ async function bootstrap() {
   // Enable validation pipes
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
-    forbidNonWhitelisted: true,
     transform: true,
+    transformOptions: { enableImplicitConversion: true },
   }));
   
   // Set global prefix for API routes
