@@ -11,7 +11,7 @@ export class StaffService {
     private staffRepository: Repository<Staff>,
   ) {}
 
-  async create(createStaffDto: CreateStaffDto): Promise<Staff> {
+  async create(createStaffDto: CreateStaffDto & { shopId: string }): Promise<Staff> {
     const staff = this.staffRepository.create(createStaffDto);
     return this.staffRepository.save(staff);
   }

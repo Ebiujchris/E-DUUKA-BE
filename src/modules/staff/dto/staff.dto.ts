@@ -47,9 +47,6 @@ export class CreateStaffDto {
   @IsString()
   @IsOptional()
   notes?: string;
-
-  // shopId is injected from JWT in the controller — not sent by client
-  shopId?: string;
 }
 
 export class UpdateStaffDto {
