@@ -77,30 +77,26 @@ export class AuthService {
 
   async resetPassword(phone: string, code: string, newPassword: string) {
     const user = await this.usersService.findByPhone(phone);
-    
-    if (!user) {
-      throw new UnauthorizedException('Phone number not found');
-    }
-
-    if (!user.resetCode || !user.resetCodeExpiry) {
-      throw new UnauthorizedException('No reset code found. Please request a new one.');
-    }
-
-    if (user.resetCode !== code) {
-      throw new UnauthorizedException('Invalid reset code');
-    }
-
-    if (new Date() > user.resetCodeExpiry) {
-      throw new UnauthorizedException('Reset code has expired. Please request a new one.');
-    }
-
-    // Hash new password
+    if (!user) throw new UnauthorizedException('Phone number not found');
+    if (!user.resetCode || !user.resetCodeExpiry) throw new UnauthorizedException('No reset code found.');
+    if (user.resetCode !== code) throw new UnauthorizedException('Invalid reset code');
+    if (new Date() > user.resetCodeExpiry) throw new UnauthorizedException('Reset code has expired.');
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update password and clear reset code
     await this.usersService.updatePassword(user.id, hashedPassword);
-
     return { message: 'Password reset successfully' };
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.usersService.findByPhone(
+      (await this.usersService.findOne(userId)).phone,
+    );
+    if (!user) throw new UnauthorizedException('User not found');
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) throw new UnauthorizedException('Current password is incorrect');
+    if (newPassword.length < 6) throw new UnauthorizedException('New password must be at least 6 characters');
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.usersService.updatePassword(userId, hashed);
+    return { message: 'Password changed successfully' };
   }
 
   private generateToken(user: any) {
