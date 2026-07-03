@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional, IsPhoneNumber, IsDateString, IsDecimal, IsBoolean } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsNumber, IsDateString, IsBoolean } from 'class-validator';
 import { StaffRole, StaffStatus } from '../../../entities/staff.entity';
 
 export class CreateStaffDto {
@@ -24,7 +24,7 @@ export class CreateStaffDto {
   @IsOptional()
   village?: string;
 
-  @IsDecimal()
+  @IsNumber()
   @IsOptional()
   salary?: number;
 
@@ -48,8 +48,8 @@ export class CreateStaffDto {
   @IsOptional()
   notes?: string;
 
-  @IsString()
-  shopId: string;
+  // shopId is injected from JWT in the controller — not sent by client
+  shopId?: string;
 }
 
 export class UpdateStaffDto {
@@ -65,7 +65,7 @@ export class UpdateStaffDto {
   @IsOptional()
   status?: StaffStatus;
 
-  @IsDecimal()
+  @IsNumber()
   @IsOptional()
   salary?: number;
 
