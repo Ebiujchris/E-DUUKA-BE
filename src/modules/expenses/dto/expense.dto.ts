@@ -1,11 +1,11 @@
-import { IsEnum, IsOptional, IsDecimal, IsString, IsDateString } from 'class-validator';
+import { IsEnum, IsOptional, IsNumber, IsString, IsDateString } from 'class-validator';
 import { ExpenseCategory } from '../../../entities/expense.entity';
 
 export class CreateExpenseDto {
   @IsEnum(ExpenseCategory)
   category: ExpenseCategory;
 
-  @IsDecimal()
+  @IsNumber()
   amount: number;
 
   @IsString()
@@ -27,8 +27,7 @@ export class CreateExpenseDto {
   @IsOptional()
   approvedBy?: string;
 
-  @IsString()
-  shopId: string;
+  shopId?: string;
 }
 
 export class UpdateExpenseDto {
@@ -36,7 +35,7 @@ export class UpdateExpenseDto {
   @IsOptional()
   category?: ExpenseCategory;
 
-  @IsDecimal()
+  @IsNumber()
   @IsOptional()
   amount?: number;
 
@@ -51,8 +50,4 @@ export class UpdateExpenseDto {
   @IsDateString()
   @IsOptional()
   expenseDate?: string;
-
-  @IsString()
-  @IsOptional()
-  approvedBy?: string;
 }

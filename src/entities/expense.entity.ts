@@ -5,11 +5,18 @@ export enum ExpenseCategory {
   RENT = 'rent',
   UTILITIES = 'utilities',
   TRANSPORT = 'transport',
+  STOCK_PURCHASE = 'stock_purchase',
   STOCK_LOSS = 'stock_loss',
   REPAIRS = 'repairs',
   SALARIES = 'salaries',
+  TAXES = 'taxes',
   ADVERTISING = 'advertising',
-  MISCELLANEOUS = 'miscellaneous'
+  FUEL = 'fuel',
+  INTERNET = 'internet',
+  WATER = 'water',
+  ELECTRICITY = 'electricity',
+  CASUAL_LABOUR = 'casual_labour',
+  MISCELLANEOUS = 'miscellaneous',
 }
 
 @Entity('expenses')
