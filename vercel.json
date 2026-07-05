@@ -9,7 +9,25 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "api/index.ts"
+      "methods": ["OPTIONS"],
+      "headers": {
+        "Access-Control-Allow-Origin": "https://e-duuka-fe.vercel.app",
+        "Access-Control-Allow-Methods": "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization,Accept",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "86400"
+      },
+      "continue": true
+    },
+    {
+      "src": "/(.*)",
+      "dest": "api/index.ts",
+      "headers": {
+        "Access-Control-Allow-Origin": "https://e-duuka-fe.vercel.app",
+        "Access-Control-Allow-Methods": "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization,Accept",
+        "Access-Control-Allow-Credentials": "true"
+      }
     }
   ]
 }
