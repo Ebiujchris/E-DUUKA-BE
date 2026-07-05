@@ -1,4 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Shop } from '../../entities/shop.entity';
 import { SalesService } from '../sales/sales.service';
 import { ProductsService } from '../products/products.service';
 import { CreditsService } from '../credits/credits.service';
@@ -8,6 +11,8 @@ import { ExpensesService } from '../expenses/expenses.service';
 @Injectable()
 export class DashboardService {
   constructor(
+    @InjectRepository(Shop)
+    private shopRepository: Repository<Shop>,
     private salesService: SalesService,
     private productsService: ProductsService,
     private creditsService: CreditsService,
@@ -142,17 +147,23 @@ export class DashboardService {
   async getBalanceSheet(shopId: string) {
     const now = new Date();
     const yearStart = new Date(now.getFullYear(), 0, 1);
+    // All-time start for retained earnings
+    const allTimeStart = new Date('2000-01-01');
 
-    const [products, creditStats, suppliers, allSales, allExpenses] = await Promise.all([
+    const [shop, products, creditStats, suppliers, ytdSales, allTimeSales, ytdExpenses, allTimeExpenses] = await Promise.all([
+      this.shopRepository.findOne({ where: { id: shopId } }),
       this.productsService.findAll(shopId),
       this.creditsService.getCreditStats(shopId),
       this.suppliersService.findAll(shopId),
       this.salesService.findByDateRange(shopId, yearStart, now),
+      this.salesService.findByDateRange(shopId, allTimeStart, now),
+      this.expensesService.findByDateRange(shopId, yearStart, now),
       this.expensesService.findAll(shopId),
     ]);
 
+    const initialCapital = Number(shop?.initialCapital ?? 0);
+
     // ── ASSETS ────────────────────────────────────────────────────────────────
-    // 1. Stock on hand (units × buying price)
     const stockValue = products.reduce(
       (sum, p) => sum + Number(p.stockQuantity) * Number(p.buyingPrice), 0,
     );
@@ -163,33 +174,40 @@ export class DashboardService {
       value: Number(p.stockQuantity) * Number(p.buyingPrice),
     }));
 
-    // 2. Receivables — money owed to the shop by customers (outstanding credits)
     const receivables = Number(creditStats.totalOutstanding);
 
-    // 3. Revenue this year (proxy for cash earned — bank + till combined)
-    const activeSales = allSales.filter(s => s.status !== 'voided');
-    const cashRevenue = activeSales
+    const activeSalesYTD = ytdSales.filter(s => s.status !== 'voided');
+    const cashRevenue = activeSalesYTD
       .filter(s => s.paymentType !== 'credit')
       .reduce((sum, s) => sum + Number(s.totalAmount), 0);
 
     // ── LIABILITIES ───────────────────────────────────────────────────────────
-    // What the shop owes suppliers
     const supplierDebt = suppliers.reduce((sum, s) => sum + Number(s.totalOwed), 0);
     const supplierBreakdown = suppliers
       .filter(s => Number(s.totalOwed) > 0)
       .map(s => ({ name: s.name, owed: Number(s.totalOwed) }));
 
-    // ── INCOME STATEMENT (YTD) ─────────────────────────────────────────────────
-    const totalRevenue = activeSales.reduce((sum, s) => sum + Number(s.totalAmount), 0);
-    const grossProfit  = activeSales.reduce((sum, s) =>
+    // ── INCOME STATEMENT (YTD) ────────────────────────────────────────────────
+    const totalRevenueYTD = activeSalesYTD.reduce((sum, s) => sum + Number(s.totalAmount), 0);
+    const grossProfitYTD  = activeSalesYTD.reduce((sum, s) =>
       sum + (Number(s.unitPrice) - Number(s.product?.buyingPrice ?? 0)) * Number(s.quantity), 0);
-    const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-    const netProfit = grossProfit - totalExpenses;
+    const totalExpensesYTD = ytdExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+    const netProfitYTD = grossProfitYTD - totalExpensesYTD;
+
+    // ── RETAINED EARNINGS (all-time net profit) ───────────────────────────────
+    const activeSalesAllTime = allTimeSales.filter(s => s.status !== 'voided');
+    const grossProfitAllTime = activeSalesAllTime.reduce((sum, s) =>
+      sum + (Number(s.unitPrice) - Number(s.product?.buyingPrice ?? 0)) * Number(s.quantity), 0);
+    const totalExpensesAllTime = allTimeExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+    const retainedEarnings = grossProfitAllTime - totalExpensesAllTime;
 
     // ── EQUITY ────────────────────────────────────────────────────────────────
+    // Equity = Initial Capital + Retained Earnings (accumulated net profit)
     const totalAssets = stockValue + receivables + cashRevenue;
     const totalLiabilities = supplierDebt;
-    const equity = totalAssets - totalLiabilities;
+    const equity = initialCapital + retainedEarnings;
+    // Accounting check: assets should equal liabilities + equity
+    // (difference = unrecorded cash movements, normal for single-entry bookkeeping)
 
     return {
       asOf: now.toISOString(),
@@ -205,12 +223,16 @@ export class DashboardService {
         supplierBreakdown,
         total: totalLiabilities,
       },
-      equity,
+      equity: {
+        initialCapital,
+        retainedEarnings,
+        total: equity,
+      },
       incomeStatement: {
-        totalRevenue,
-        grossProfit,
-        totalExpenses,
-        netProfit,
+        totalRevenue: totalRevenueYTD,
+        grossProfit: grossProfitYTD,
+        totalExpenses: totalExpensesYTD,
+        netProfit: netProfitYTD,
         period: `${now.getFullYear()} YTD`,
       },
     };
