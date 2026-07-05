@@ -24,4 +24,17 @@ export class DashboardController {
   getBalanceSheet(@Req() req: any) {
     return this.dashboardService.getBalanceSheet(req.user.shopId);
   }
+
+  @Get('cash-flow')
+  getCashFlow(
+    @Query('year') year: string,
+    @Req() req: any,
+  ) {
+    return this.dashboardService.getCashFlow(req.user.shopId, year ? parseInt(year) : undefined);
+  }
+
+  @Get('income-comparison')
+  getIncomeComparison(@Req() req: any) {
+    return this.dashboardService.getIncomeComparison(req.user.shopId);
+  }
 }

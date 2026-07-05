@@ -7,6 +7,10 @@ import { ProductsService } from '../products/products.service';
 import { CreditsService } from '../credits/credits.service';
 import { SuppliersService } from '../suppliers/suppliers.service';
 import { ExpensesService } from '../expenses/expenses.service';
+import { FixedAssetsService } from '../fixed-assets/fixed-assets.service';
+import { ExpenseCategory } from '../../entities/expense.entity';
+
+const TAX_RATE = 0.30; // 30% corporate tax provision
 
 @Injectable()
 export class DashboardService {
@@ -18,6 +22,7 @@ export class DashboardService {
     private creditsService: CreditsService,
     private suppliersService: SuppliersService,
     private expensesService: ExpensesService,
+    private fixedAssetsService: FixedAssetsService,
   ) {}
 
   async getDashboardData(shopId: string) {
@@ -25,27 +30,18 @@ export class DashboardService {
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-    // Get today's sales stats
     const todaysStats = await this.salesService.getSalesStats(shopId, startOfDay, endOfDay);
-    
-    // Get this week's stats
+
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay());
     const weekStats = await this.salesService.getSalesStats(shopId, startOfWeek, today);
-    
-    // Get this month's stats
+
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const monthStats = await this.salesService.getSalesStats(shopId, startOfMonth, today);
 
-    // Get low stock products
     const lowStockProducts = await this.productsService.findLowStock(shopId);
-    
-    // Get credit stats
     const creditStats = await this.creditsService.getCreditStats(shopId);
-    
-    // Get recent sales
     const recentSales = await this.salesService.findAll(shopId);
-    const recentSalesLimited = recentSales.slice(0, 5);
 
     return {
       today: {
@@ -75,7 +71,7 @@ export class DashboardService {
         pendingCount: creditStats.pendingCredits,
         overdueCount: creditStats.overdueCredits,
       },
-      recentActivity: recentSalesLimited.map(sale => ({
+      recentActivity: recentSales.slice(0, 5).map(sale => ({
         id: sale.id,
         type: 'sale',
         description: `${sale.product.name} × ${sale.quantity}`,
@@ -89,7 +85,7 @@ export class DashboardService {
   async getAnalytics(shopId: string, period: 'week' | 'month' | 'year' = 'month') {
     const today = new Date();
     let startDate: Date;
-    
+
     switch (period) {
       case 'week':
         startDate = new Date(today);
@@ -98,35 +94,25 @@ export class DashboardService {
       case 'year':
         startDate = new Date(today.getFullYear(), 0, 1);
         break;
-      default: // month
+      default:
         startDate = new Date(today.getFullYear(), today.getMonth(), 1);
     }
 
     const stats = await this.salesService.getSalesStats(shopId, startDate, today);
     const sales = await this.salesService.findByDateRange(shopId, startDate, today);
-    
-    // Group sales by day for chart data
+
     const dailySales = sales.reduce((acc, sale) => {
       const date = sale.createdAt.toISOString().split('T')[0];
-      if (!acc[date]) {
-        acc[date] = { sales: 0, profit: 0, transactions: 0 };
-      }
+      if (!acc[date]) acc[date] = { sales: 0, profit: 0, transactions: 0 };
       acc[date].sales += sale.totalAmount;
       acc[date].profit += (sale.unitPrice - (sale.product?.buyingPrice || 0)) * sale.quantity;
       acc[date].transactions += 1;
       return acc;
     }, {});
 
-    // Get top selling products
     const productSales = sales.reduce((acc, sale) => {
       const productId = sale.productId;
-      if (!acc[productId]) {
-        acc[productId] = {
-          product: sale.product,
-          totalQuantity: 0,
-          totalRevenue: 0,
-        };
-      }
+      if (!acc[productId]) acc[productId] = { product: sale.product, totalQuantity: 0, totalRevenue: 0 };
       acc[productId].totalQuantity += sale.quantity;
       acc[productId].totalRevenue += sale.totalAmount;
       return acc;
@@ -136,37 +122,48 @@ export class DashboardService {
       .sort((a: any, b: any) => b.totalRevenue - a.totalRevenue)
       .slice(0, 5);
 
-    return {
-      summary: stats,
-      dailySales,
-      topProducts,
-      period,
-    };
+    return { summary: stats, dailySales, topProducts, period };
   }
+
+  // ── helpers ────────────────────────────────────────────────────────────────
+
+  private calcPeriodIncome(sales: any[], expenses: any[]) {
+    const active = sales.filter(s => s.status !== 'voided');
+    const revenue = active.reduce((s, x) => s + Number(x.totalAmount), 0);
+    const grossProfit = active.reduce(
+      (s, x) => s + (Number(x.unitPrice) - Number(x.product?.buyingPrice ?? 0)) * Number(x.quantity), 0,
+    );
+    const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0);
+    const netProfit = grossProfit - totalExpenses;
+    const taxProvision = Math.max(0, netProfit * TAX_RATE);
+    const netProfitAfterTax = netProfit - taxProvision;
+    return { revenue, grossProfit, totalExpenses, netProfit, taxProvision, netProfitAfterTax };
+  }
+
+  // ── BALANCE SHEET ──────────────────────────────────────────────────────────
 
   async getBalanceSheet(shopId: string) {
     const now = new Date();
     const yearStart = new Date(now.getFullYear(), 0, 1);
-    // All-time start for retained earnings
     const allTimeStart = new Date('2000-01-01');
 
-    const [shop, products, creditStats, suppliers, ytdSales, allTimeSales, ytdExpenses, allTimeExpenses] = await Promise.all([
-      this.shopRepository.findOne({ where: { id: shopId } }),
-      this.productsService.findAll(shopId),
-      this.creditsService.getCreditStats(shopId),
-      this.suppliersService.findAll(shopId),
-      this.salesService.findByDateRange(shopId, yearStart, now),
-      this.salesService.findByDateRange(shopId, allTimeStart, now),
-      this.expensesService.findByDateRange(shopId, yearStart, now),
-      this.expensesService.findAll(shopId),
-    ]);
+    const [shop, products, creditStats, suppliers, ytdSales, allTimeSales, ytdExpenses, allTimeExpenses, fixedAssets] =
+      await Promise.all([
+        this.shopRepository.findOne({ where: { id: shopId } }),
+        this.productsService.findAll(shopId),
+        this.creditsService.getCreditStats(shopId),
+        this.suppliersService.findAll(shopId),
+        this.salesService.findByDateRange(shopId, yearStart, now),
+        this.salesService.findByDateRange(shopId, allTimeStart, now),
+        this.expensesService.findByDateRange(shopId, yearStart, now),
+        this.expensesService.findAll(shopId),
+        this.fixedAssetsService.findAll(shopId),
+      ]);
 
     const initialCapital = Number(shop?.initialCapital ?? 0);
 
     // ── ASSETS ────────────────────────────────────────────────────────────────
-    const stockValue = products.reduce(
-      (sum, p) => sum + Number(p.stockQuantity) * Number(p.buyingPrice), 0,
-    );
+    const stockValue = products.reduce((s, p) => s + Number(p.stockQuantity) * Number(p.buyingPrice), 0);
     const stockItems = products.map(p => ({
       name: p.name,
       qty: Number(p.stockQuantity),
@@ -179,35 +176,62 @@ export class DashboardService {
     const activeSalesYTD = ytdSales.filter(s => s.status !== 'voided');
     const cashRevenue = activeSalesYTD
       .filter(s => s.paymentType !== 'credit')
-      .reduce((sum, s) => sum + Number(s.totalAmount), 0);
+      .reduce((s, x) => s + Number(x.totalAmount), 0);
+
+    // Fixed assets at book value (net of accumulated depreciation)
+    const fixedAssetItems = fixedAssets
+      .filter(a => a.isActive)
+      .map(a => {
+        const { bookValue, accumulatedDepreciation, annualDepreciation } =
+          this.fixedAssetsService.calcDepreciation(a, now);
+        return {
+          id: a.id,
+          name: a.name,
+          category: a.category,
+          cost: Number(a.cost),
+          accumulatedDepreciation,
+          bookValue,
+          annualDepreciation,
+          acquireDate: a.acquireDate,
+        };
+      });
+
+    const totalFixedAssets = fixedAssetItems.reduce((s, a) => s + a.bookValue, 0);
+    const totalDepreciation = fixedAssetItems.reduce((s, a) => s + a.annualDepreciation, 0);
+    const totalAssets = stockValue + receivables + cashRevenue + totalFixedAssets;
 
     // ── LIABILITIES ───────────────────────────────────────────────────────────
-    const supplierDebt = suppliers.reduce((sum, s) => sum + Number(s.totalOwed), 0);
+    const supplierDebt = suppliers.reduce((s, x) => s + Number(x.totalOwed), 0);
     const supplierBreakdown = suppliers
       .filter(s => Number(s.totalOwed) > 0)
       .map(s => ({ name: s.name, owed: Number(s.totalOwed) }));
 
     // ── INCOME STATEMENT (YTD) ────────────────────────────────────────────────
-    const totalRevenueYTD = activeSalesYTD.reduce((sum, s) => sum + Number(s.totalAmount), 0);
-    const grossProfitYTD  = activeSalesYTD.reduce((sum, s) =>
-      sum + (Number(s.unitPrice) - Number(s.product?.buyingPrice ?? 0)) * Number(s.quantity), 0);
-    const totalExpensesYTD = ytdExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-    const netProfitYTD = grossProfitYTD - totalExpensesYTD;
+    const ytdIncome = this.calcPeriodIncome(ytdSales, ytdExpenses);
 
-    // ── RETAINED EARNINGS (all-time net profit) ───────────────────────────────
-    const activeSalesAllTime = allTimeSales.filter(s => s.status !== 'voided');
-    const grossProfitAllTime = activeSalesAllTime.reduce((sum, s) =>
-      sum + (Number(s.unitPrice) - Number(s.product?.buyingPrice ?? 0)) * Number(s.quantity), 0);
-    const totalExpensesAllTime = allTimeExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+    // Payroll breakdown (YTD salaries category)
+    const payrollYTD = ytdExpenses
+      .filter(e => e.category === ExpenseCategory.SALARIES)
+      .reduce((s, e) => s + Number(e.amount), 0);
+
+    // Expense breakdown by category (YTD)
+    const expenseByCategoryMap: Record<string, number> = {};
+    for (const e of ytdExpenses) {
+      expenseByCategoryMap[e.category] = (expenseByCategoryMap[e.category] ?? 0) + Number(e.amount);
+    }
+    const expenseBreakdown = Object.entries(expenseByCategoryMap).map(([category, total]) => ({ category, total }));
+
+    // ── RETAINED EARNINGS (all-time net profit before tax) ────────────────────
+    const allTimeActive = allTimeSales.filter(s => s.status !== 'voided');
+    const grossProfitAllTime = allTimeActive.reduce(
+      (s, x) => s + (Number(x.unitPrice) - Number(x.product?.buyingPrice ?? 0)) * Number(x.quantity), 0,
+    );
+    const totalExpensesAllTime = allTimeExpenses.reduce((s, e) => s + Number(e.amount), 0);
     const retainedEarnings = grossProfitAllTime - totalExpensesAllTime;
 
     // ── EQUITY ────────────────────────────────────────────────────────────────
-    // Equity = Initial Capital + Retained Earnings (accumulated net profit)
-    const totalAssets = stockValue + receivables + cashRevenue;
-    const totalLiabilities = supplierDebt;
     const equity = initialCapital + retainedEarnings;
-    // Accounting check: assets should equal liabilities + equity
-    // (difference = unrecorded cash movements, normal for single-entry bookkeeping)
+    const totalLiabilities = supplierDebt;
 
     return {
       asOf: now.toISOString(),
@@ -216,6 +240,8 @@ export class DashboardService {
         stockItems,
         receivables,
         cashRevenue,
+        fixedAssets: fixedAssetItems,
+        totalFixedAssets,
         total: totalAssets,
       },
       liabilities: {
@@ -229,12 +255,125 @@ export class DashboardService {
         total: equity,
       },
       incomeStatement: {
-        totalRevenue: totalRevenueYTD,
-        grossProfit: grossProfitYTD,
-        totalExpenses: totalExpensesYTD,
-        netProfit: netProfitYTD,
+        totalRevenue: ytdIncome.revenue,
+        grossProfit: ytdIncome.grossProfit,
+        totalExpenses: ytdIncome.totalExpenses,
+        netProfit: ytdIncome.netProfit,
+        taxProvision: ytdIncome.taxProvision,
+        netProfitAfterTax: ytdIncome.netProfitAfterTax,
+        payroll: payrollYTD,
+        expenseBreakdown,
+        annualDepreciation: totalDepreciation,
         period: `${now.getFullYear()} YTD`,
       },
     };
+  }
+
+  // ── CASH FLOW STATEMENT ───────────────────────────────────────────────────
+
+  async getCashFlow(shopId: string, year: number = new Date().getFullYear()) {
+    const start = new Date(year, 0, 1);
+    const end   = new Date(year + 1, 0, 1);
+
+    const [sales, expenses, fixedAssets] = await Promise.all([
+      this.salesService.findByDateRange(shopId, start, end),
+      this.expensesService.findByDateRange(shopId, start, end),
+      this.fixedAssetsService.findAll(shopId),
+    ]);
+
+    const activeSales = sales.filter(s => s.status !== 'voided');
+
+    // Operating: cash & mobile in, credit out is not cash yet
+    const cashInFromSales = activeSales
+      .filter(s => s.paymentType !== 'credit')
+      .reduce((s, x) => s + Number(x.totalAmount), 0);
+
+    // Exclude stock purchases — those are tracked as purchase orders, not expenses
+    const operatingExpenses = expenses
+      .filter(e => e.category !== ExpenseCategory.STOCK_PURCHASE)
+      .reduce((s, e) => s + Number(e.amount), 0);
+
+    const stockPurchases = expenses
+      .filter(e => e.category === ExpenseCategory.STOCK_PURCHASE)
+      .reduce((s, e) => s + Number(e.amount), 0);
+
+    const netOperating = cashInFromSales - operatingExpenses;
+
+    // Investing: fixed assets acquired this year
+    const assetsAcquiredThisYear = fixedAssets.filter(a => {
+      const d = new Date(a.acquireDate);
+      return d >= start && d < end;
+    });
+    const cashOutForAssets = assetsAcquiredThisYear.reduce((s, a) => s + Number(a.cost), 0);
+    const netInvesting = -cashOutForAssets;
+
+    // Financing: initial capital is a one-time inflow (show only for year of shop creation if known, else 0)
+    const netFinancing = 0; // no loan/equity draws tracked yet
+
+    return {
+      year,
+      operating: {
+        cashInFromSales,
+        operatingExpenses,
+        stockPurchases,
+        net: netOperating,
+      },
+      investing: {
+        assetsAcquired: assetsAcquiredThisYear.map(a => ({
+          name: a.name,
+          cost: Number(a.cost),
+          date: a.acquireDate,
+        })),
+        net: netInvesting,
+      },
+      financing: {
+        net: netFinancing,
+      },
+      netCashFlow: netOperating + netInvesting + netFinancing,
+    };
+  }
+
+  // ── INCOME COMPARISON (year vs year) ─────────────────────────────────────
+
+  async getIncomeComparison(shopId: string) {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+
+    const buildYear = async (year: number) => {
+      const start = new Date(year, 0, 1);
+      const end = year === currentYear ? now : new Date(year + 1, 0, 1);
+      const [sales, expenses] = await Promise.all([
+        this.salesService.findByDateRange(shopId, start, end),
+        this.expensesService.findByDateRange(shopId, start, end),
+      ]);
+      const inc = this.calcPeriodIncome(sales, expenses);
+
+      // Monthly breakdown for chart
+      const monthly = Array.from({ length: 12 }, (_, m) => {
+        const ms = sales.filter(s => {
+          const d = new Date(s.createdAt);
+          return d.getFullYear() === year && d.getMonth() === m && s.status !== 'voided';
+        });
+        const me = expenses.filter(e => {
+          const d = new Date(e.expenseDate);
+          return d.getFullYear() === year && d.getMonth() === m;
+        });
+        const revenue = ms.reduce((s, x) => s + Number(x.totalAmount), 0);
+        const expTotal = me.reduce((s, e) => s + Number(e.amount), 0);
+        const grossProfit = ms.reduce(
+          (s, x) => s + (Number(x.unitPrice) - Number(x.product?.buyingPrice ?? 0)) * Number(x.quantity), 0,
+        );
+        return { month: m + 1, revenue, grossProfit, expenses: expTotal, netProfit: grossProfit - expTotal };
+      });
+
+      return { year, ...inc, monthly, isPartial: year === currentYear };
+    };
+
+    const [current, previous] = await Promise.all([
+      buildYear(currentYear),
+      buildYear(currentYear - 1),
+    ]);
+
+    return { current, previous };
   }
 }

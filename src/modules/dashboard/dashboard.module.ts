@@ -7,12 +7,13 @@ import { ProductsModule } from '../products/products.module';
 import { CreditsModule } from '../credits/credits.module';
 import { SuppliersModule } from '../suppliers/suppliers.module';
 import { ExpensesModule } from '../expenses/expenses.module';
+import { FixedAssetsModule } from '../fixed-assets/fixed-assets.module';
 import { Shop } from '../../entities/shop.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Shop]),
-    SalesModule, ProductsModule, CreditsModule, SuppliersModule, ExpensesModule,
+    SalesModule, ProductsModule, CreditsModule, SuppliersModule, ExpensesModule, FixedAssetsModule,
   ],
   controllers: [DashboardController],
   providers: [DashboardService],
