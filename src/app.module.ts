@@ -25,6 +25,8 @@ import { StaffModule } from './modules/staff/staff.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
+import { FixedAssetsModule } from './modules/fixed-assets/fixed-assets.module';
+import { FixedAsset } from './entities/fixed-asset.entity';
 
 @Module({
   imports: [
@@ -39,7 +41,7 @@ import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      entities: [Shop, User, Product, Sale, Credit, Staff, Expense, Supplier, PurchaseOrder],
+      entities: [Shop, User, Product, Sale, Credit, Staff, Expense, Supplier, PurchaseOrder, FixedAsset],
       synchronize: true,
       logging: false,
       ssl: true,
@@ -59,6 +61,7 @@ import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.
     ExpensesModule,
     SuppliersModule,
     PurchaseOrdersModule,
+    FixedAssetsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
