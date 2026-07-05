@@ -12,22 +12,8 @@ async function createApp() {
 
   const app = await NestFactory.create(AppModule, adapter);
 
-  const allowedOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
-    : [
-        'http://localhost:5173',
-        'http://localhost:3000',
-        'https://e-duuka-fe.vercel.app',
-      ];
-
-  app.enableCors({
-    origin: allowedOrigins,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type,Authorization,Accept',
-    credentials: true,
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
-  });
+  // CORS is handled in api/index.ts before the app is called
+  // enableCors is intentionally omitted here to avoid header conflicts on Vercel
 
   app.useGlobalPipes(
     new ValidationPipe({
