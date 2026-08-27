@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
+import { StaffService } from '../staff/staff.service';
 import { CreateUserDto } from '../users/dto/user.dto';
 import * as bcrypt from 'bcryptjs';
 
@@ -8,71 +9,76 @@ import * as bcrypt from 'bcryptjs';
 export class AuthService {
   constructor(
     private usersService: UsersService,
+    private staffService: StaffService,
     private jwtService: JwtService,
   ) {}
 
   async register(createUserDto: CreateUserDto) {
     const existingUser = await this.usersService.findByPhone(createUserDto.phone);
-    
-    let user;
-    let isNew = false;
-    
-    if (existingUser) {
-      user = existingUser;
-      isNew = false;
-    } else {
-      user = await this.usersService.create(createUserDto);
-      isNew = true;
-    }
-
-    const token = this.generateToken(user);
+    let user; let isNew = false;
+    if (existingUser) { user = existingUser; }
+    else { user = await this.usersService.create(createUserDto); isNew = true; }
+    const token = this.generateOwnerToken(user);
     return { user: this.sanitizeUser(user), isNew, token };
   }
 
   async login(phone: string, password: string) {
-    const user = await this.usersService.findByPhone(phone);
-    
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+    const phonesToTry = this.normalizePhoneVariants(phone);
+
+    // Try owner first
+    for (const p of phonesToTry) {
+      const owner = await this.usersService.findByPhone(p);
+      if (owner) {
+        if (!owner.isActive) throw new UnauthorizedException('This account is inactive');
+        if (!owner.password) throw new UnauthorizedException('Account has no password set');
+        const valid = await bcrypt.compare(password, owner.password);
+        if (!valid) throw new UnauthorizedException('Invalid credentials');
+        return { user: this.buildOwnerProfile(owner), token: this.generateOwnerToken(owner) };
+      }
     }
 
-    if (!user.isActive) {
-      throw new UnauthorizedException('This account is inactive');
+    // Try staff
+    for (const p of phonesToTry) {
+      const staff = await this.staffService.findByPhone(p);
+      if (staff) {
+        if (staff.status !== 'active') throw new UnauthorizedException('This staff account is inactive');
+        if (!staff.password) throw new UnauthorizedException('Staff account has no password. Ask the owner to set one.');
+        const valid = await bcrypt.compare(password, staff.password);
+        if (!valid) throw new UnauthorizedException('Invalid credentials');
+        return { user: this.buildStaffProfile(staff), token: this.generateStaffToken(staff) };
+      }
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
+    throw new UnauthorizedException('Invalid credentials');
+  }
 
-    const token = this.generateToken(user);
-    return { user: this.sanitizeUser(user), token };
+  private normalizePhoneVariants(phone: string): string[] {
+    const trimmed = phone.trim();
+    const variants = new Set<string>();
+    variants.add(trimmed);
+    if (trimmed.startsWith('+256')) {
+      variants.add('0' + trimmed.slice(4));
+      variants.add(trimmed.slice(1));
+    }
+    if (trimmed.startsWith('0')) {
+      variants.add('+256' + trimmed.slice(1));
+      variants.add('256' + trimmed.slice(1));
+    }
+    if (trimmed.startsWith('256') && !trimmed.startsWith('+')) {
+      variants.add('+' + trimmed);
+      variants.add('0' + trimmed.slice(3));
+    }
+    return [...variants];
   }
 
   async forgotPassword(phone: string) {
     const user = await this.usersService.findByPhone(phone);
-    
-    if (!user) {
-      throw new UnauthorizedException('Phone number not found');
-    }
-
-    // Generate 6-digit code
+    if (!user) throw new UnauthorizedException('Phone number not found');
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Set expiry to 15 minutes from now
     const resetCodeExpiry = new Date();
     resetCodeExpiry.setMinutes(resetCodeExpiry.getMinutes() + 15);
-
-    // Save reset code to user
     await this.usersService.updateResetCode(user.id, resetCode, resetCodeExpiry);
-
-    // In production, send SMS here using Africa's Talking or similar service
-    // For now, return the code (remove this in production!)
-    return { 
-      message: 'Reset code generated successfully',
-      code: resetCode, // Remove this in production
-      expiresIn: '15 minutes'
-    };
+    return { message: 'Reset code generated successfully', code: resetCode, expiresIn: '15 minutes' };
   }
 
   async resetPassword(phone: string, code: string, newPassword: string) {
@@ -99,24 +105,61 @@ export class AuthService {
     return { message: 'Password changed successfully' };
   }
 
-  private generateToken(user: any) {
-    const payload = {
-      sub: user.id,
-      id: user.id,
-      phone: user.phone,
-      shopId: user.shopId,
+  // ── Token generators ─────────────────────────────────────────────────────
+
+  private generateOwnerToken(user: any) {
+    return this.jwtService.sign({
+      sub: user.id, id: user.id, phone: user.phone,
+      name: user.name, shopId: user.shopId, type: 'owner',
+    }, { expiresIn: '30d', secret: process.env.JWT_SECRET || 'your-secret-key' });
+  }
+
+  private generateStaffToken(staff: any) {
+    return this.jwtService.sign({
+      sub: staff.id, id: staff.id, phone: staff.phone,
+      shopId: staff.shopId, type: 'staff', role: staff.role,
+      permissions: {
+        canViewDashboard:   staff.canViewDashboard   ?? true,
+        canMakeSales:       staff.canMakeSales        ?? true,
+        canAccessInventory: staff.canAccessInventory  ?? false,
+        canApproveCredits:  staff.canApproveCredits   ?? false,
+        canManageExpenses:  staff.canManageExpenses   ?? false,
+        canViewReports:     staff.canViewReports      ?? false,
+        pagePermissions:    {},
+      },
+    }, { expiresIn: '30d', secret: process.env.JWT_SECRET || 'your-secret-key' });
+  }
+
+  // ── Profile builders ─────────────────────────────────────────────────────
+
+  private buildOwnerProfile(user: any) {
+    return {
+      id: user.id, name: user.name, phone: user.phone,
+      email: user.email, shopId: user.shopId,
+      accountType: 'owner' as const, role: 'owner',
+      permissions: { canAccessInventory: true, canApproveCredits: true, canViewReports: true, pagePermissions: {} },
     };
-    return this.jwtService.sign(payload, {
-      expiresIn: '7d',
-      secret: process.env.JWT_SECRET || 'your-secret-key',
-    });
+  }
+
+  private buildStaffProfile(staff: any) {
+    return {
+      id: staff.id, name: staff.name, phone: staff.phone,
+      shopId: staff.shopId, accountType: 'staff' as const, role: staff.role,
+      permissions: {
+        canViewDashboard:   staff.canViewDashboard   ?? true,
+        canMakeSales:       staff.canMakeSales        ?? true,
+        canAccessInventory: staff.canAccessInventory  ?? false,
+        canApproveCredits:  staff.canApproveCredits   ?? false,
+        canManageExpenses:  staff.canManageExpenses   ?? false,
+        canViewReports:     staff.canViewReports      ?? false,
+        pagePermissions:    {},
+      },
+    };
   }
 
   private sanitizeUser(user: any) {
-    const sanitized = { ...user };
-    delete sanitized.password;
-    delete sanitized.resetCode;
-    delete sanitized.resetCodeExpiry;
-    return sanitized;
+    const s = { ...user };
+    delete s.password; delete s.resetCode; delete s.resetCodeExpiry;
+    return s;
   }
 }

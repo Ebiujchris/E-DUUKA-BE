@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional, IsNumber, IsDateString, IsBoolean } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 import { StaffRole, StaffStatus } from '../../../entities/staff.entity';
 
 export class CreateStaffDto {
@@ -8,29 +8,25 @@ export class CreateStaffDto {
   @IsString()
   phone: string;
 
+  @IsString()
+  @IsOptional()
+  password?: string;
+
   @IsEnum(StaffRole)
   @IsOptional()
   role?: StaffRole;
-
-  @IsEnum(StaffStatus)
-  @IsOptional()
-  status?: StaffStatus;
-
-  @IsString()
-  @IsOptional()
-  idNumber?: string;
-
-  @IsString()
-  @IsOptional()
-  village?: string;
 
   @IsNumber()
   @IsOptional()
   salary?: number;
 
-  @IsDateString()
+  @IsBoolean()
   @IsOptional()
-  hireDate?: string;
+  canViewDashboard?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  canMakeSales?: boolean;
 
   @IsBoolean()
   @IsOptional()
@@ -43,6 +39,10 @@ export class CreateStaffDto {
   @IsBoolean()
   @IsOptional()
   canViewReports?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  canManageExpenses?: boolean;
 
   @IsString()
   @IsOptional()
@@ -54,6 +54,10 @@ export class UpdateStaffDto {
   @IsOptional()
   name?: string;
 
+  @IsString()
+  @IsOptional()
+  password?: string;
+
   @IsEnum(StaffRole)
   @IsOptional()
   role?: StaffRole;
@@ -68,6 +72,14 @@ export class UpdateStaffDto {
 
   @IsBoolean()
   @IsOptional()
+  canViewDashboard?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  canMakeSales?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
   canAccessInventory?: boolean;
 
   @IsBoolean()
@@ -78,7 +90,7 @@ export class UpdateStaffDto {
   @IsOptional()
   canViewReports?: boolean;
 
-  @IsString()
+  @IsBoolean()
   @IsOptional()
-  notes?: string;
+  canManageExpenses?: boolean;
 }

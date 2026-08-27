@@ -2,16 +2,17 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, Up
 import { Shop } from './shop.entity';
 
 export enum StaffRole {
-  OWNER = 'owner',
-  MANAGER = 'manager',
-  CASHIER = 'cashier',
-  STOCK_KEEPER = 'stock_keeper'
+  OWNER        = 'owner',
+  MANAGER      = 'manager',
+  CASHIER      = 'cashier',
+  SALES        = 'sales',
+  STOCK_KEEPER = 'stock_keeper',
 }
 
 export enum StaffStatus {
-  ACTIVE = 'active',
+  ACTIVE   = 'active',
   INACTIVE = 'inactive',
-  ON_LEAVE = 'on_leave'
+  ON_LEAVE = 'on_leave',
 }
 
 @Entity('staff')
@@ -25,17 +26,14 @@ export class Staff {
   @Column({ unique: true })
   phone: string;
 
+  @Column({ nullable: true, select: false })
+  password?: string;
+
   @Column({ type: 'varchar', enum: StaffRole, default: StaffRole.CASHIER })
   role: StaffRole;
 
   @Column({ type: 'varchar', enum: StaffStatus, default: StaffStatus.ACTIVE })
   status: StaffStatus;
-
-  @Column({ nullable: true })
-  idNumber?: string;
-
-  @Column({ nullable: true })
-  village?: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   salary?: number;
@@ -44,6 +42,12 @@ export class Staff {
   hireDate?: Date;
 
   @Column({ default: true })
+  canViewDashboard: boolean;
+
+  @Column({ default: true })
+  canMakeSales: boolean;
+
+  @Column({ default: false })
   canAccessInventory: boolean;
 
   @Column({ default: false })
@@ -51,6 +55,9 @@ export class Staff {
 
   @Column({ default: false })
   canViewReports: boolean;
+
+  @Column({ default: false })
+  canManageExpenses: boolean;
 
   @Column({ nullable: true })
   notes?: string;
