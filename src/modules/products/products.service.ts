@@ -67,10 +67,31 @@ export class ProductsService {
     return await this.productRepository.save(product);
   }
 
-  async remove(id: string, shopId: string): Promise<void> {
-    const result = await this.productRepository.delete({ id, shopId });
-    if (result.affected === 0) {
-      throw new NotFoundException(`Product with ID ${id} not found`);
+  async remove(id: string, shopId: string): Promise<{ message: string }> {
+    try {
+      const result = await this.productRepository.delete({ id, shopId });
+      if (result.affected === 0) {
+        throw new NotFoundException(`Product with ID ${id} not found`);
+      }
+      return { message: 'Product deleted successfully' };
+    } catch (err: any) {
+      // Foreign key constraint — product has related sales/purchase orders
+      if (err?.code === '23503' || err?.message?.includes('foreign key') || err?.message?.includes('violates')) {
+        throw new NotFoundException(
+          'Cannot delete this product — it has recorded sales or purchase orders. Set stock to 0 instead.'
+        );
+      }
+      throw err;
     }
+  }
+
+  async getCategories(shopId: string): Promise<string[]> {
+    const results = await this.productRepository
+      .createQueryBuilder('product')
+      .select('DISTINCT product.category', 'category')
+      .where('product.shopId = :shopId', { shopId })
+      .andWhere('product.category IS NOT NULL')
+      .getRawMany();
+    return results.map((r: any) => r.category).filter(Boolean).sort();
   }
 }

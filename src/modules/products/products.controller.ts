@@ -23,6 +23,11 @@ export class ProductsController {
     return this.productsService.findLowStock(req.user.shopId);
   }
 
+  @Get('categories')
+  getCategories(@Req() req: any) {
+    return this.productsService.getCategories(req.user.shopId);
+  }
+
   @Get('barcode/:barcode')
   findByBarcode(@Param('barcode') barcode: string, @Req() req: any) {
     return this.productsService.findByBarcode(barcode, req.user.shopId);
