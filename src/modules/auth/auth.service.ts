@@ -110,7 +110,9 @@ export class AuthService {
   private generateOwnerToken(user: any) {
     return this.jwtService.sign({
       sub: user.id, id: user.id, phone: user.phone,
-      name: user.name, shopId: user.shopId, type: 'owner',
+      name: user.name, shopId: user.shopId,
+      shopName: user.shop?.name ?? '',
+      type: 'owner',
     }, { expiresIn: '30d', secret: process.env.JWT_SECRET || 'your-secret-key' });
   }
 
@@ -136,6 +138,7 @@ export class AuthService {
     return {
       id: user.id, name: user.name, phone: user.phone,
       email: user.email, shopId: user.shopId,
+      shopName: user.shop?.name ?? '',
       accountType: 'owner' as const, role: 'owner',
       permissions: { canAccessInventory: true, canApproveCredits: true, canViewReports: true, pagePermissions: {} },
     };
