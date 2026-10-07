@@ -4,6 +4,7 @@ import { Repository, Between } from 'typeorm';
 import { Sale, SaleStatus } from '../../entities/sale.entity';
 import { Credit } from '../../entities/credit.entity';
 import { ProductsService } from '../products/products.service';
+import { ActivityService } from '../activity/activity.service';
 import { CreateSaleDto, UpdateSaleDto, VoidSaleDto } from './dto/sale.dto';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class SalesService {
     @InjectRepository(Credit)
     private creditRepository: Repository<Credit>,
     private productsService: ProductsService,
+    private readonly activityService: ActivityService,
   ) {}
 
   async create(createSaleDto: CreateSaleDto, shopId: string): Promise<Sale> {
@@ -34,6 +36,22 @@ export class SalesService {
     const savedSale = await this.saleRepository.save(sale);
     
     await this.productsService.updateStock(createSaleDto.productId, shopId, createSaleDto.quantity);
+
+    await this.activityService.record({
+      shopId,
+      userId: createSaleDto.userId,
+      action: 'sale_created',
+      entityType: 'sale',
+      entityId: savedSale.id,
+      message: `Sale recorded: ${product.name} x ${createSaleDto.quantity}`,
+      metadata: {
+        productId: product.id,
+        productName: product.name,
+        quantity: createSaleDto.quantity,
+        totalAmount,
+        paymentType: createSaleDto.paymentType,
+      },
+    });
     
     // If payment type is credit, create a credit record
     if (createSaleDto.paymentType === 'credit' && createSaleDto.customerName) {
@@ -157,6 +175,22 @@ export class SalesService {
       sale.notes = voidSaleDto.notes;
     }
 
-    return await this.saleRepository.save(sale);
+    const updatedSale = await this.saleRepository.save(sale);
+
+    await this.activityService.record({
+      shopId,
+      userId,
+      action: 'sale_voided',
+      entityType: 'sale',
+      entityId: id,
+      message: `Sale voided: ${sale.product?.name || 'product'} x ${sale.quantity}`,
+      metadata: {
+        reason: voidSaleDto.reason,
+        notes: voidSaleDto.notes,
+        voidedAt: updatedSale.voidedAt,
+      },
+    });
+
+    return updatedSale;
   }
 }

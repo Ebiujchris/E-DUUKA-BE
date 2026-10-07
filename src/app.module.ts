@@ -27,6 +27,8 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
 import { FixedAssetsModule } from './modules/fixed-assets/fixed-assets.module';
 import { FixedAsset } from './entities/fixed-asset.entity';
+import { ActivityModule } from './modules/activity/activity.module';
+import { AuditLog } from './entities/audit-log.entity';
 
 @Module({
   imports: [
@@ -41,7 +43,7 @@ import { FixedAsset } from './entities/fixed-asset.entity';
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      entities: [Shop, User, Product, Sale, Credit, Staff, Expense, Supplier, PurchaseOrder, FixedAsset],
+      entities: [Shop, User, Product, Sale, Credit, Staff, Expense, Supplier, PurchaseOrder, FixedAsset, AuditLog],
       synchronize: true,
       logging: false,
       ssl: true,
@@ -62,6 +64,7 @@ import { FixedAsset } from './entities/fixed-asset.entity';
     SuppliersModule,
     PurchaseOrdersModule,
     FixedAssetsModule,
+    ActivityModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
