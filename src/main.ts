@@ -42,8 +42,8 @@ async function bootstrap() {
   const port = process.env.PORT || 3001;
   await app.listen(port);
   
-  console.log(`🚀 E-Duuka API is running on: http://localhost:${port}`);
-  console.log(`📱 Mobile API endpoints: http://localhost:${port}/api`);
-  console.log(`🏠 Homepage: http://localhost:${port}`);
+  console.log(`E-Duuka API is running on: http://localhost:${port}`);
+  console.log(`Mobile API endpoints: http://localhost:${port}/api`);
+  console.log(`Homepage: http://localhost:${port}`);
 }
 bootstrap();

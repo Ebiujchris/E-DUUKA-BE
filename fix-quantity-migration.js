@@ -23,9 +23,9 @@ async function fixQuantityColumn() {
     await client.query('ALTER TABLE sales ALTER COLUMN quantity TYPE DECIMAL(10,2)');
     console.log('Column type changed successfully!');
 
-    console.log('\n✅ Migration completed successfully!');
+    console.log('\nMigration completed successfully!');
   } catch (error) {
-    console.error('❌ Migration failed:', error.message);
+    console.error('Migration failed:', error.message);
     process.exit(1);
   } finally {
     await client.end();

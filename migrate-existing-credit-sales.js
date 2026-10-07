@@ -74,10 +74,10 @@ async function migrateExistingCreditSales() {
       created++;
     }
 
-    console.log(`\n✅ Migration completed successfully!`);
+    console.log(`\nMigration completed successfully!`);
     console.log(`Created ${created} credit records from existing credit sales`);
   } catch (error) {
-    console.error('❌ Migration failed:', error.message);
+    console.error('Migration failed:', error.message);
     process.exit(1);
   } finally {
     await client.end();

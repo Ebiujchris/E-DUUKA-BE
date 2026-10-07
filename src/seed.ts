@@ -24,7 +24,7 @@ async function seed() {
       shopInitialCapital: 500000,
     });
 
-    console.log('✅ Created user:', user.name);
+    console.log('Created user:', user.name);
 
     // Create sample products
     const products = [
@@ -76,7 +76,7 @@ async function seed() {
     for (const productData of products) {
       const product = await productsService.create(productData, user.shopId, user.id);
       createdProducts.push(product);
-      console.log('✅ Created product:', product.name);
+      console.log('Created product:', product.name);
     }
 
     // Create sample sales
@@ -107,15 +107,15 @@ async function seed() {
 
     for (const saleData of sales) {
       const sale = await salesService.create(saleData, user.shopId);
-      console.log('✅ Created sale:', `${sale.product.name} × ${sale.quantity}`);
+      console.log('Created sale:', `${sale.product.name} × ${sale.quantity}`);
     }
 
-    console.log('\n🎉 Seed data created successfully!');
-    console.log(`👤 User ID: ${user.id}`);
-    console.log('🔗 Test the API at: http://localhost:3001');
+    console.log('\nSeed data created successfully!');
+    console.log(`User ID: ${user.id}`);
+    console.log('Test the API at: http://localhost:3001');
     
   } catch (error) {
-    console.error('❌ Error seeding data:', error);
+    console.error('Error seeding data:', error);
   } finally {
     await app.close();
   }
