@@ -35,7 +35,13 @@ export class SalesService {
 
     const savedSale = await this.saleRepository.save(sale);
     
-    await this.productsService.updateStock(createSaleDto.productId, shopId, createSaleDto.quantity);
+    await this.productsService.updateStock(
+      createSaleDto.productId,
+      shopId,
+      -createSaleDto.quantity,
+      'sale',
+      createSaleDto.userId,
+    );
 
     await this.activityService.record({
       shopId,
@@ -163,7 +169,9 @@ export class SalesService {
     await this.productsService.updateStock(
       sale.productId,
       shopId,
-      -sale.quantity // Negative to add back to stock
+      sale.quantity,
+      'sale_voided',
+      userId,
     );
 
     // Update sale status

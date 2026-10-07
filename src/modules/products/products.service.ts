@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from '../../entities/product.entity';
@@ -105,22 +105,36 @@ export class ProductsService {
     return updated;
   }
 
-  async updateStock(id: string, shopId: string, quantity: number): Promise<Product> {
+  async updateStock(
+    id: string,
+    shopId: string,
+    quantity: number,
+    reason = 'manual_adjustment',
+    userId?: string,
+  ): Promise<Product> {
     const product = await this.findOne(id, shopId);
     const beforeQuantity = Number(product.stockQuantity);
-    product.stockQuantity -= quantity;
+    const signedQuantity = Number(quantity || 0);
+    const afterQuantity = beforeQuantity + signedQuantity;
+
+    if (afterQuantity < 0) {
+      throw new BadRequestException('Stock cannot go below zero');
+    }
+
+    product.stockQuantity = afterQuantity;
     const updated = await this.productRepository.save(product);
 
-    const stockDelta = -quantity;
     await this.activityService.record({
       shopId,
+      userId,
       action: 'stock_adjustment',
       entityType: 'product',
       entityId: id,
-      message: `Stock ${stockDelta >= 0 ? 'increased' : 'reduced'} for ${product.name}: ${Math.abs(stockDelta)} units`,
+      message: `Stock ${signedQuantity >= 0 ? 'increased' : 'decreased'} for ${product.name}: ${Math.abs(signedQuantity)} units (${reason})`,
       metadata: {
         productName: product.name,
-        delta: stockDelta,
+        reason,
+        delta: signedQuantity,
         before: beforeQuantity,
         after: Number(updated.stockQuantity),
       },

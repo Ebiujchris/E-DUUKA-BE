@@ -50,10 +50,16 @@ export class ProductsController {
   @Patch(':id/stock')
   updateStock(
     @Param('id') id: string,
-    @Body('quantity') quantity: number,
+    @Body() body: { quantity: number; reason?: string },
     @Req() req: any,
   ) {
-    return this.productsService.updateStock(id, req.user.shopId, quantity);
+    return this.productsService.updateStock(
+      id,
+      req.user.shopId,
+      Number(body.quantity),
+      body.reason || 'manual_adjustment',
+      req.user.userId,
+    );
   }
 
   @Delete(':id')
